@@ -10,6 +10,7 @@ use Typecho\Http\Client;
 use Typecho\Common;
 use Utils\Helper;
 use Widget\Upload;
+use Widget\Options;
 
 
 // 防止直接运行
@@ -20,7 +21,7 @@ if (!defined('__TYPECHO_ROOT_DIR__'))  exit;
  * 
  * @package BackblazeUploader
  * @author 猫东东
- * @version 1.1.0
+ * @version 2.1.0
  * @link https://github.com/xa1st
  */
 
@@ -73,6 +74,15 @@ class Plugin implements PluginInterface {
     
         $path = new Text('path', null, 'typecho/', _t('存储路径'), _t('文件存储在存储桶中的路径前缀，以/结尾，例如：typecho/'));
         $form->addInput($path);
+
+        $timeOut = new Text(
+            'timeOut',
+            NULL,
+            '30',
+            _t('超时时间（秒）'),
+            _t('上传文件超时时间，单位为秒，默认为30秒。')
+        );
+        $form->addInput($timeOut->addRule('required', _t('请求超时时间')));
     }
   
     /**
@@ -89,27 +99,38 @@ class Plugin implements PluginInterface {
     * 上传文件处理函数
     * 
     * @param array $file 上传的文件
+    * @param bool $modify 是否为修改
     * @return array|bool
     */
-    public static function uploadHandle($file) {
+    public static function uploadHandle($file, $modify = false) {
         // 获取上传文件
         if (empty($file['name'])) return false;    
+        // 如果修改，则判定一下file['path']是否为空
+        if ($modify && empty($file['path'])) return false;
         // 校验扩展名
         $ext = self::getSafeName($file['name']);
         // 验证可上传文件类型
-        if (!Upload::checkFileType($ext)) return false;
+        if (!Upload::checkFileType($ext))  throw new Exception('不允许上传的文件类型');
         // 获取插件配置
         $options = Helper::options()->plugin('BackblazeUploader');
-        // 生成文件名
-        $filePath = date('Y/md/');
-        $fileName = sprintf('%u', crc32(uniqid())) . '.' . $ext;
-        $path = $options->path . $filePath;
-        // 上传文件
-        $result = self::uploadToBackblaze($file['tmp_name'], $path . $fileName);
-        // 返回错误
-        if (!$result) return false;
-        // 返回相对存储路径
-        return ['name' => $file['name'], 'path' => $filePath . $fileName, 'size' => $file['size'], 'type' => $file['type'], 'mime' => @Common::mimeContentType($file['tmp_name'])];
+        // 完全路径
+        $fileName = $modify ? $file['path'] : (rtrim($options->path, '/') . '/' . date('Y/md/') . sprintf('%u', crc32(uniqid())) . '.' . $ext);
+        // 上传到Backblaze.com
+        $uploaded = self::uploadToBackblaze($file['tmp_name'], $fileName, $options);
+        // 上传失败抛出错误
+        if (!$uploaded) throw new Exception('上传失败');
+        // 路径
+        $domain = empty($options->domain) ? "https://f002.backblazeb2.com/file/{$options->bucketName}" : $options->domain;
+        // 返回结果
+        return [
+            'name' => $file['name'], 
+            'path' => $fileName,  // 这个直接用于
+            'url' => $domain . '/' . $fileName,
+            'size' => $uploaded['contentLength'], 
+            'type' => str_replace('image/', '', $uploaded['contentType']),
+            'mime' => @Common::mimeContentType($file['tmp_name']),
+            'fileid' => $uploaded['fileId']
+        ];
     }
   
     /**
@@ -120,22 +141,10 @@ class Plugin implements PluginInterface {
     * @return string|bool
     */
     public static function modifyHandle($content, $file) {
-        // 如果不存在附件，直接返回
-        if (!isset($content['attachment'])) return false;    
-        // 获取插件配置
-        $options = Helper::options()->plugin('BackblazeUploader');
-        // 生成文件名
-        $ext = self::getSafeName($content['name']);
-        $filePath = date('Y/md/');
-        $fileName = sprintf('%u', crc32(uniqid())) . '.' . $ext;
-        $path = $options->path . $filePath;
-        // 上传文件
-        $result = self::uploadToBackblaze($file, $path . $fileName);
-        if (!$result) return false;
-        // 删除旧文件
-        self::deleteFile($content['attachment']->path);
-        // 返回相对存储路径
-        return ['name' => $content['name'], 'path' => $filePath . $fileName, 'size' => $content['size'], 'type' => $content['type'], 'mime' => $content['mime']];
+        // 把旧文件的路径给新文件
+        $file['path'] = $content['attachment']->path;
+        // 再上传新文件
+        return self::uploadHandle($file, true);
     }
   
     /**
@@ -145,8 +154,34 @@ class Plugin implements PluginInterface {
     * @return bool
     */
     public static function deleteHandle(array $content) {
-        if (!isset($content['attachment'])) return false;    
-        return self::deleteFile($content['attachment']->path);
+        // 强行获取，如果为空也不报错
+        $fileid = @$content['attachment']->fileid ?? '';
+        // 强行获取，如果为空也不报错
+        $author = @$content['attachment']->author ?? '';
+        // 如果文件不存在且不是这个插件上传的，则直接返回
+        if (empty($fileid) && $author != 'BackblazeUploader') return false;
+        // 获取插件配置
+        $options = Helper::options()->plugin('BackblazeUploader');
+        // 获取授权信息
+        $auth = self::getBackblazeAuth($options->keyId, $options->applicationKey);
+        // 授权失败则直接返回
+        if (!$auth) return false;
+        // 开始删除文件
+        try {
+            $client = Client::get();
+            $client->setHeader('Authorization', $auth['authorizationToken'])
+                ->setHeader('Content-Type', 'application/json')
+                ->setData(json_encode(['fileName' => $content['attachment']->path, 'fileId' => $fileid]))
+                ->setTimeout(intval($options->timeout) <= 0 ? 30 : $options->timeout)
+                ->setMethod(Client::METHOD_POST)
+                ->send($auth['apiUrl'] . '/b2api/v2/b2_delete_file_version');
+            // 删除成功
+            if ($client->getResponseStatus() != 200) throw new Exception($client->getResponseBody());
+            // 返回true
+            return true;
+        } catch (Exception $e) {
+            throw new Exception('BackblazeUploader: 删除文件失败: ' . $e->getMessage());
+        }
     }
   
     /**
@@ -156,19 +191,95 @@ class Plugin implements PluginInterface {
     * @return string
     */
     public static function attachmentHandle(array $content) {
-        // 获取插件配置
-        $options = Helper::options()->plugin('BackblazeUploader');
-        // 生成完整的文件URL
-        if (!empty($options->domain)) {
-            // 如果自定义了域名
-            $url = $options->domain . '/' . $options->path . $content['attachment']->path;
-        } else {
-            // 使用Backblaze默认域名
-            $url = 'https://f002.backblazeb2.com/file/' . $options->bucketName . '/' .  $options->path . $content['attachment']->path;
-        }
-        return $url;
+        // 如果存在url，则直接返回url
+        if($content['attachment']->url) return $content['attachment']->url;
+        // 返回本地图片地址
+        return Common::url($content['attachment']->path, Options::alloc()->siteUrl);
     }
+
+    
   
+    /**
+    * 上传文件到Backblaze B2
+    * 
+    * @param string $file 本地文件路径
+    * @param string $target 目标存储路径
+    * @return bool
+    */
+    private static function uploadToBackblaze($filePath, $fileTargetPath, $options = []) {
+        // 检查配置
+        if (empty($options->keyId) || empty($options->applicationKey)) throw new Exception('BackblazeUploader: 缺少必需的配置信息');
+        // 获取授权信息
+        $authResponse = self::getBackblazeAuth($options->keyId, $options->applicationKey);
+        // 判定响应
+        if (!$authResponse || !isset($authResponse['authorizationToken'])) throw new Exception('授权失败');
+        // 获取上传URL
+        try {
+            $client = Client::get();
+            $client->setHeader('Authorization', $authResponse['authorizationToken'])
+                    ->setHeader('Content-Type', 'application/json')
+                    ->setData(json_encode(['bucketId' => $options->bucketId]))
+                    ->setTimeout(10)
+                    ->setMethod(Client::METHOD_POST)
+                    ->send($authResponse['apiUrl'] . '/b2api/v2/b2_get_upload_url');
+            // 处理返回值
+            if ($client->getResponseStatus() != 200) throw new Exception($client->getResponseBody());
+            // 拿到上传相关信息
+            $uploadAuth = json_decode($client->getResponseBody(), true);
+        } catch (Exception $e) {
+            throw new Exception('BackblazeUploader: 获取上传地址失败: ' . $e->getMessage());
+        }
+        // 检查文件是否存在
+        if (!file_exists($filePath) || !is_readable($filePath)) throw new Exception('BackblazeUploader: 文件不存在或不可读: ' . $filePath);    
+        // 获取文件内容 
+        $fileContent = file_get_contents($filePath);
+        if ($fileContent === false) throw new Exception('BackblazeUploader: 无法读取文件内容: ' . $filePath);
+        // 上传
+        try {
+            $client = Client::get();
+            $client->setHeader('Authorization', $uploadAuth['authorizationToken'])
+                ->setHeader('X-Bz-File-Name', urlencode($fileTargetPath))
+                ->setHeader('Content-Type', Common::mimeContentType($filePath))
+                ->setHeader('X-Bz-Content-Sha1', sha1_file($filePath))
+                ->setHeader('X-Bz-Info-Author', 'BackblazeUploader')
+                ->setTimeout(intval($options->timeout) <= 0 ? 30 : $options->timeout)
+                ->setData($fileContent)
+                ->setMethod(Client::METHOD_POST)
+                ->send($uploadAuth['uploadUrl']);
+            $status = $client->getResponseStatus();
+            // 抛出错误
+            if ($status != 200) throw new Exception ('BackblazeUploader: 上传失败，HTTP状态码: ' . $status . ', 响应: ' . $client->getResponseBody());
+            // 返回响应
+            return json_decode($client->getResponseBody(), true);
+        } catch (Exception $e) {
+            throw new Exception('BackblazeUploader: 上传异常: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+    * 获取Backblaze B2认证信息
+    * 
+    * @param string $keyId 应用密钥ID
+    * @param string $applicationKey 应用密钥
+    * @return array|bool
+    */
+    private static function getBackblazeAuth(string $applicationKeyId, string $applicationKey) {
+        // 发起请求
+        try {
+            $client = Client::get();
+            $client->setHeader('Authorization', 'Basic ' . base64_encode($applicationKeyId . ':' . $applicationKey))
+                ->setMethod(Client::METHOD_GET)
+                ->setTimeout(10)
+                ->send('https://api.backblazeb2.com/b2api/v2/b2_authorize_account');
+            // 获取响应
+            if ($client->getResponseStatus() != 200) throw new Exception($client->getResponseBody());
+            // 解析响应
+            return json_decode($client->getResponseBody(), true);
+        } catch (Exception $e) {
+            throw new Exception('BackblazeUploader: 上传异常: ' . $e->getMessage());
+        }  
+    }
+
     /**
     * 获取安全的文件名
     * 
@@ -181,150 +292,5 @@ class Plugin implements PluginInterface {
         $name = mb_convert_encoding($name, 'UTF-8', 'UTF-8');
         $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
         return $ext;
-    }
-  
-    /**
-    * 上传文件到Backblaze B2
-    * 
-    * @param string $file 本地文件路径
-    * @param string $target 目标存储路径
-    * @return bool
-    */
-    private static function uploadToBackblaze(string $file, string $target): bool {
-        // 获取插件配置
-        $options = Helper::options()->plugin('BackblazeUploader');
-        // 获取授权信息
-        $auth = self::getBackblazeAuth($options->keyId, $options->applicationKey);
-        // 授权失败，直接返回
-        if (!$auth) return false;
-    
-        // 获取上传URL和授权令牌
-        $uploadAuth = self::getUploadUrl($auth, $options->bucketId);
-        if (!$uploadAuth) return false;
-    
-        // 上传文件
-        $fileContent = file_get_contents($file);
-        $sha1 = sha1_file($file);
-        $contentType = Common::mimeContentType($file);
-    
-        try {
-            $client = Client::get();
-            $client->setHeader('Authorization', $uploadAuth['authorizationToken'])
-                ->setHeader('X-Bz-File-Name', urlencode($target))
-                ->setHeader('Content-Type', $contentType)
-                ->setHeader('X-Bz-Content-Sha1', $sha1)
-                ->setHeader('X-Bz-Info-Author', 'BackblazeUploader')
-                ->setData($fileContent)
-                ->setMethod(Client::METHOD_POST)
-                ->send($uploadAuth['uploadUrl']);
-            return $client->getResponseStatus() === 200;
-        } catch (Exception $e) {
-            error_log($e->getMessage());
-            return false;
-        }
-    }
-  
-    /**
-    * 删除Backblaze B2上的文件
-    * 
-    * @param string $path 文件路径
-    * @return bool
-    */
-    private static function deleteFile(string $path): bool {
-        // 获取插件配置
-        $options = Helper::options()->plugin('BackblazeUploader');
-        // 获取授权信息
-        $auth = self::getBackblazeAuth($options->keyId, $options->applicationKey);
-        if (!$auth) return false;
-    
-        // 获取文件信息
-        $fileName = $options->path . $path;
-        $fileId = self::getFileId($auth, $options->bucketName, $fileName);
-        if (!$fileId) return false; // 文件不存在，视为删除成功
-        // 删除文件
-        try {
-            $client = Client::get();
-            $client->setHeader('Authorization', $auth['authorizationToken'])
-                ->setHeader('Content-Type', 'application/json')
-                ->setData(json_encode(['fileName' => $fileName, 'fileId' => $fileId]))
-                ->setMethod(Client::METHOD_POST)
-                ->send($auth['apiUrl'] . '/b2api/v2/b2_delete_file_version');
-            return $client->getResponseStatus() === 200;
-        } catch (Exception $e) {
-            error_log($e->getMessage());
-            return false;
-        }
-    }
-  
-    /**
-    * 获取Backblaze B2认证信息
-    * 
-    * @param string $keyId 应用密钥ID
-    * @param string $applicationKey 应用密钥
-    * @return array|bool
-    */
-    private static function getBackblazeAuth(string $keyId, string $applicationKey) {
-        // 创建认证信息
-        $credentials = base64_encode($keyId . ':' . $applicationKey);
-        try {
-            $client = Client::get();
-            $client->setHeader('Authorization', 'Basic ' . $credentials)
-                    ->setMethod(Client::METHOD_GET)
-                    ->send('https://api.backblazeb2.com/b2api/v2/b2_authorize_account');
-            // 获取响应
-            if ($client->getResponseStatus() === 200) return json_decode($client->getResponseBody(), true);
-        } catch (Exception $e) {
-            error_log($e->getMessage());
-        }
-        return false;
-    }
-  
-    /**
-    * 获取上传URL和授权令牌
-    * 
-    * @param array $auth 认证信息
-    * @param string $bucketId 存储桶ID
-    * @return array|bool
-    */
-    private static function getUploadUrl(array $auth, string $bucketId) {
-        try {
-            $client = Client::get();
-            $client->setHeader('Authorization', $auth['authorizationToken'])
-                    ->setHeader('Content-Type', 'application/json')
-                    ->setData(json_encode(['bucketId' => $bucketId]))
-                    ->setMethod(Client::METHOD_POST)
-                    ->send($auth['apiUrl'] . '/b2api/v2/b2_get_upload_url');
-            // 处理返回值
-            if ($client->getResponseStatus() === 200) return json_decode($client->getResponseBody(), true);
-        } catch (Exception $e) {
-            return false;
-        }
-        return false;
-    }
-  
-    /**
-    * 获取文件ID
-    * 
-    * @param array $auth 认证信息
-    * @param string $bucketName 存储桶名称
-    * @param string $fileName 文件名
-    * @return string|bool
-    */
-    private static function getFileId(array $auth, string $bucketName, string $fileName) {
-        try {
-            $client = Client::get();
-            $client->setHeader('Authorization', $auth['authorizationToken'])
-                   ->setHeader('Content-Type', 'application/json')
-                   ->setData(json_encode(['bucketName' => $bucketName, 'prefix' => $fileName, 'maxFileCount' => 1 ]))
-                   ->setMethod(Client::METHOD_POST)
-                   ->send($auth['apiUrl'] . '/b2api/v2/b2_list_file_names');
-            if ($client->getResponseStatus() === 200) {
-                $data = json_decode($client->getResponseBody(), true);
-                if (!empty($data['files']) && $data['files'][0]['fileName'] === $fileName) return $data['files'][0]['fileId'];
-            }
-        } catch (Exception $e) {
-            error_log($e->getMessage());
-        }
-        return false;
     }
 }
