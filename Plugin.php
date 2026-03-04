@@ -197,10 +197,10 @@ class Plugin implements PluginInterface {
             $attachment = $content->toArray();
         } else {
             // 旧版本中是数组
-            $attachment = $content['attachment'] ?? [];
+            $attachment = $content['attachment'];
         }
         // 如果存在url，则直接返回url
-        if($attachment['url']) return $attachment['url'];
+        if(!empty($attachment['url'])) return $attachment['url'];
         // 返回本地图片地址
         return Common::url($attachment['path'], Options::alloc()->siteUrl);
     }
