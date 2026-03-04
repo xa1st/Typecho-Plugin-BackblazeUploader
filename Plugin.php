@@ -21,7 +21,7 @@ if (!defined('__TYPECHO_ROOT_DIR__')) exit;
  * 
  * @package BackblazeUploader
  * @author 猫东东
- * @version 2.2.0
+ * @version 2.3.0
  * @link https://github.com/xa1st/Typecho-Plugin-BackblazeUploader
  */
 
@@ -74,6 +74,10 @@ class Plugin implements PluginInterface {
     
         $path = new Text('path', null, 'typecho/', _t('存储路径'), _t('文件存储在存储桶中的路径前缀，以/结尾，例如：typecho/'));
         $form->addInput($path);
+
+        // 默认占位图
+        $placeholder = new Text('placeholder', null, '', _t('默认占位图'), _t('上传文件时，如果文件上传失败，则显示此图片。'));
+        $form->addInput($placeholder);
 
         $timeOut = new Text(
             'timeOut',
@@ -185,24 +189,29 @@ class Plugin implements PluginInterface {
     }
   
     /**
-    * 获取实际文件网址
-    * 
-    * @param array|Typecho::Config $content 文件相关信息 1.3以内的版本是array，1.3以上的是Typecho::Config
-    * @return string
-    */
-    public static function attachmentHandle(Mixed $content) {
-        // 判定参数类型
+     * 获取实际文件网址（兼容 Typecho 1.2/1.3+）
+     * @param mixed $content
+     * @return string
+     */
+    public static function attachmentHandle($content) {
+        // 统一转换为数组处理
         if ($content instanceof \Typecho\Config) {
-            // 说明是1.3.0以上版本
             $attachment = $content->toArray();
         } else {
-            // 旧版本中是数组
-            $attachment = $content['attachment'];
+            // 如果是旧版数组，尝试获取内部 attachment 键，若无则使用自身
+            $attachment = isset($content['attachment']) ? $content['attachment'] : $content;
         }
-        // 如果存在url，则直接返回url
-        if(!empty($attachment['url'])) return $attachment['url'];
-        // 返回本地图片地址
-        return Common::url($attachment['path'], Options::alloc()->siteUrl);
+        // 1. 优先使用已存在的完整 URL (通常是 CDN 或云存储插件处理过的)
+        if (!empty($attachment['url'])) return $attachment['url'];
+        // 2. 获取插件配置
+        $options = \Widget\Options::alloc();  
+        // 3. 其次使用相对路径拼接
+        if (!empty($attachment['path'])) {
+            // 获取站点 URL
+            return \Typecho\Common::url($attachment['path'], $options->siteUrl);
+        }
+        // 4. 如果没有路径，返回占位图
+        return $options->placeholder;
     }
   
     /**
