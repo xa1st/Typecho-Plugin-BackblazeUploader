@@ -14,15 +14,15 @@ use Widget\Options;
 
 
 // 防止直接运行
-if (!defined('__TYPECHO_ROOT_DIR__'))  exit;
+if (!defined('__TYPECHO_ROOT_DIR__')) exit;
 
 /**
  * 将Typecho附件上传至Backblaze B2存储
  * 
  * @package BackblazeUploader
  * @author 猫东东
- * @version 2.1.0
- * @link https://github.com/xa1st
+ * @version 2.2.0
+ * @link https://github.com/xa1st/Typecho-Plugin-BackblazeUploader
  */
 
 class Plugin implements PluginInterface {
@@ -187,17 +187,23 @@ class Plugin implements PluginInterface {
     /**
     * 获取实际文件网址
     * 
-    * @param array $content 文件相关信息
+    * @param array|Typecho::Config $content 文件相关信息 1.3以内的版本是array，1.3以上的是Typecho::Config
     * @return string
     */
-    public static function attachmentHandle(array $content) {
+    public static function attachmentHandle(Mixed $content) {
+        // 判定参数类型
+        if ($content instanceof \Typecho\Config) {
+            // 说明是1.3.0以上版本
+            $attachment = $content->toArray();
+        } else {
+            // 旧版本中是数组
+            $attachment = $content['attachment'] ?? [];
+        }
         // 如果存在url，则直接返回url
-        if($content['attachment']->url) return $content['attachment']->url;
+        if($attachment['url']) return $attachment['url'];
         // 返回本地图片地址
-        return Common::url($content['attachment']->path, Options::alloc()->siteUrl);
+        return Common::url($attachment['path'], Options::alloc()->siteUrl);
     }
-
-    
   
     /**
     * 上传文件到Backblaze B2
