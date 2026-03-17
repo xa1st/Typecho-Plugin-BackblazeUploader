@@ -1,107 +1,77 @@
-﻿Copyright (c) 2026 猫东东(Alex Xu)
-
-Typecho-Plugin-BackblazeUploader is licensed under Mulan PSL v2.
-You can use this software according to the terms and conditions of the Mulan PSL v2.
-You may obtain a copy of Mulan PSL v2 at:
-
-http://license.coscl.org.cn/MulanPSL2
-
-THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
-EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
-MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
-See the Mulan PSL v2 for more details.
-
+﻿Mulan Permissive Software License, Version 2 (Mulan PSL v2)
 木兰宽松许可证, 第2版
 
-木兰宽松许可证， 第2版
+Mulan PSL v2 is released in both Chinese and English languages. In case of any discrepancy between the Chinese and English versions, the Chinese version shall prevail.
+《木兰宽松许可证》第2版中英文版本同时发布。如果中英文版本存在不一致，以中文版本为准。
+
+Copyright (c) 2026 猫东东(Alex Xu).
+All rights reserved.
+
+Software Name: Typecho-Plugin-BackblazeUploader
+软件名称：BackblazeB2图床上传插件
+
+-------------------------------------------------------------------------------------------
+
+Mulan Permissive Software License，Version 2
+
+Mulan Permissive Software License，Version 2 (Mulan PSL v2)
+January 2020 http://license.coscl.org.cn/MulanPSL2
+
+Your reproduction, use, modification and distribution of the Software shall be subject to Mulan PSL v2 (the “License”); you may obtain a copy of the License at:
+http://license.coscl.org.cn/MulanPSL2
+
+YOU MAY REPRODUCE, USE, MODIFY AND DISTRIBUTE THE SOFTWARE UNDER THE CONDITION OF COMPLYING WITH THE TERMS AND CONDITIONS OF THE LICENSE.
+
+1. Definition
+“Software” means the software as well as the relevant documentation (if any) that are made available to you under the License.
+“Contributor” means each individual or legal entity that modifies the Software and provides the modification back to the Software.
+“You” (or “Your”) means an individual or a legal entity exercising the rights granted by the License.
+
+2. Grant of Copyright License
+Subject to the terms and conditions of the License, each Contributor hereby grants to You a perpetual, worldwide, royalty-free, non-exclusive, irrevocable copyright license to reproduce, use, modify, or distribute the Software, with or without modification.
+
+3. Grant of Patent License
+Subject to the terms and conditions of the License, each Contributor hereby grants to You a perpetual, worldwide, royalty-free, non-exclusive, irrevocable (except for as stated in this section) patent license to make, have made, use, offer for sale, sell, import or otherwise transfer the Software, where such license applies only to those patent claims licensable by such Contributor that are necessarily infringed by their contribution(s) alone or by combination of their contribution(s) with the Software. If You institute patent litigation against any entity (including a cross-claim or counterclaim in a lawsuit) alleging that the Software or a contribution incorporated within the Software constitutes direct or contributory patent infringement, then any patent licenses granted to You under the License for that Software shall terminate as of the date such litigation is filed.
+
+4. No Warranty and Liability Limitation
+THE SOFTWARE IS PROVIDED ON AN “AS IS” BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING, WITHOUT LIMITATION, ANY WARRANTIES OR CONDITIONS OF TITLE, NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. EACH CONTRIBUTOR OR COPYRIGHT HOLDER SHALL NOT BE LIABLE TO YOU FOR ANY DAMAGES, INCLUDING ANY DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES ARISING FROM THE USE OR INABILITY TO USE THE SOFTWARE.
+
+5. Miscellaneous
+5.1 You shall include a copy of the License and the copyright notice for the Software in each copy of the Software that You reproduce, use, modify or distribute.
+5.2 You shall not use any trademark, service mark, logo and name of any Contributor, except for as reasonably required to describe the origin of the Software or its contribution.
+5.3 Mulan PSL v2 is released in both Chinese and English languages. In case of any discrepancy between the Chinese and English versions, the Chinese version shall prevail.
+5.4 To the extent allowed by law, the License shall be governed by and interpreted in accordance with the laws of the People’s Republic of China.
+
+-------------------------------------------------------------------------------------------
+
+木兰宽松许可证，第2版
 
 2020年1月 http://license.coscl.org.cn/MulanPSL2
 
-您对"软件"的复制、使用、修改及分发受木兰宽松许可证，第2版（"本许可证"）的如下条款的约束：
+您对“软件”的复制、使用、修改及分发受本许可证（“许可证”）的约束。您可以从以下地址获取“许可证”的一个副本：
+http://license.coscl.org.cn/MulanPSL2
 
-0. 定义
+您在遵守“许可证”条款和条件的前提下，可以复制、使用、修改及分发“软件”。
 
-"软件" 是指由"贡献"构成的许可在"本许可证"下的程序和相关文档的集合。
+1. 定义
+“软件”指在本“许可证”下向您提供的软件及相关文档（如有）。
+“贡献者”指修改“软件”并将该修改提供给“软件”的自然人或法人。
+“您”指行使本“许可证”规定的权利的自然人或法人。
 
-"贡献" 是指由任一"贡献者"许可在"本许可证"下的受版权法保护的作品。
+2. 著作权许可
+在遵守本“许可证”条款和条件的前提下，每个“贡献者”在此授予您永久性的、全球性的、免费的、非独占的、不可撤销的著作权许可，您可以复制、使用、修改及分发“软件”，无论修改与否。
 
-"贡献者" 是指将受版权法保护的作品许可在"本许可证"下的自然人或"法人实体"。
+3. 专利许可
+在遵守本“许可证”条款和条件的前提下，每个“贡献者”在此授予您永久性的、全球性的、免费的、非独占的、不可撤销的（本条约定的终止情形除外）专利许可，供您制造、委托制造、使用、许诺销售、销售、进口及其它方式转移“软件”。前述专利许可仅限于“贡献者”现在或将来拥有的、其向“软件”提供的贡献本身或该贡献与“软件”结合时必然侵犯的专利权利要求。如果您直接或间接地对任何人提起专利诉讼（包括反诉或交叉诉讼），宣称“软件”或其包含的贡献侵犯了您的专利，则本“许可证”授予您的专利许可自您提起诉讼之日起终止。
 
-"法人实体" 是指提交贡献的机构及其"关联实体"。
+4. 免责声明与责任限制
+“软件”在提供时“按现状”基础提供，不附有任何形式的明示或暗示的保证或条件，包括但不限于关于所有权、非侵权、适销性及特定用途适用性的保证或条件。在任何情况下，“贡献者”或版权持有人不对因使用或不能使用“软件”而产生的任何直接、间接、特殊、意外或惩罚性损害赔偿承担责任。
 
-"关联实体" 是指，对"本许可证"下的行为方而言，控制、受控制或与其共同受控制的机构，此处的控制是指有受控方或共同受控方至少50%直接或间接的投票权、资金或其他有价证券。
+5. 其他
+5.1 您在复制、使用、修改及分发“软件”时，必须保留本“许可证”的副本，并保留“软件”中的版权声明。
+5.2 您不得使用“贡献者”的商标、服务标记、Logo或名称，但为了说明“软件”或贡献来源的合理使用除外。
+5.3 《木兰宽松许可证》第2版中英文版本同时发布。如果中英文版本存在不一致，以中文版本为准。
+5.4 在法律允许的范围内，本“许可证”受中华人民共和国法律管辖，并依其解释。
 
-1. 授予版权许可
-
-每个"贡献者"根据"本许可证"授予您永久性的、全球性的、免费的、非独占的、不可撤销的版权许可，您可以复制、使用、修改、分发其"贡献"，不论修改与否。
-
-2. 授予专利许可
-
-每个"贡献者"根据"本许可证"授予您永久性的、全球性的、免费的、非独占的、不可撤销的（根据本条规定撤销除外）专利许可，供您制造、委托制造、使用、许诺销售、销售、进口其"贡献"或以其他方式转移其"贡献"。前述专利许可仅限于"贡献者"现在或将来拥有或控制的其"贡献"本身或其"贡献"与许可"贡献"时的"软件"结合而将必然会侵犯的专利权利要求，不包括对"贡献"的修改或包含"贡献"的其他结合。如果您或您的"关联实体"直接或间接地，就"软件"或其中的"贡献"对任何人发起专利侵权诉讼（包括反诉或交叉诉讼）或其他专利维权行动，指控其侵犯专利权，则"本许可证"授予您对"软件"的专利许可自您提起诉讼或发起维权行动之日终止。
-
-3. 无商标许可
-
-"本许可证"不提供对"贡献者"的商品名称、商标、服务标志或产品名称的商标许可，但您为满足第4条规定的声明义务而必须使用除外。
-
-4. 分发限制
-
-您可以在任何媒介中将"软件"以源程序形式或可执行形式重新分发，不论修改与否，但您必须向接收者提供"本许可证"的副本，并保留"软件"中的版权、商标、专利及免责声明。
-
-5. 免责声明与责任限制
-
-"软件"及其中的"贡献"在提供时不带任何明示或默示的担保。在任何情况下，"贡献者"或版权所有者不对任何人因使用"软件"或其中的"贡献"而引发的任何直接或间接损失承担责任，不论因何种原因导致或者基于何种法律理论，即使其曾被建议有此种损失的可能性。
-
-6. 语言
-
-"本许可证"以中英文双语表述，中英文版本具有同等法律效力。如果中英文版本存在任何冲突不一致，以中文版为准。
-
-条款结束
-
-Mulan Permissive Software License, Version 2
-Mulan Permissive Software License, Version 2 (Mulan PSL v2)
-
-January 2020 http://license.coscl.org.cn/MulanPSL2
-
-Your reproduction, use, modification and distribution of the Software shall be subject to Mulan PSL v2 (this License) with the following terms and conditions:
-
-0. Definition
-
-Software means the program and related documents which are licensed under this License and comprise all Contribution(s).
-
-Contribution means the copyrightable work licensed by a particular Contributor under this License.
-
-Contributor means the Individual or Legal Entity who licenses its copyrightable work under this License.
-
-Legal Entity means the entity making a Contribution and all its Affiliates.
-
-Affiliates means entities that control, are controlled by, or are under common control with the acting entity under this License, 'control' means direct or indirect ownership of at least fifty percent (50%) of the voting power, capital or other securities of controlled or commonly controlled entity.
-
-1. Grant of Copyright License
-
-Subject to the terms and conditions of this License, each Contributor hereby grants to you a perpetual, worldwide, royalty-free, non-exclusive, irrevocable copyright license to reproduce, use, modify, or distribute its Contribution, with modification or not.
-
-2. Grant of Patent License
-
-Subject to the terms and conditions of this License, each Contributor hereby grants to you a perpetual, worldwide, royalty-free, non-exclusive, irrevocable (except for revocation under this Section) patent license to make, have made, use, offer for sale, sell, import or otherwise transfer its Contribution, where such patent license is only limited to the patent claims owned or controlled by such Contributor now or in future which will be necessarily infringed by its Contribution alone, or by combination of the Contribution with the Software to which the Contribution was contributed.
-
-The patent license shall not apply to any modification of the Contribution, and any other combination which includes the Contribution.
-
-If you or your Affiliates directly or indirectly institute patent litigation (including a cross claim or counterclaim in a litigation) or other patent enforcement activities against any individual or entity by alleging that the Software or any Contribution in it infringes patents, then any patent license granted to you under this License for the Software shall terminate as of the date such litigation or activity is filed or taken.
-
-3. No Trademark License
-
-No trademark license is granted to use the trade names, trademarks, service marks, or product names of Contributor, except as required to fulfill notice requirements in section 4.
-
-4. Distribution Restriction
-
-You may distribute the Software in any medium with or without modification, whether in source or executable forms, provided that you provide recipients with a copy of this License and retain copyright, patent, trademark and disclaimer statements in the Software.
-
-5. Disclaimer of Warranty and Limitation of Liability
-
-THE SOFTWARE AND CONTRIBUTION IN IT ARE PROVIDED WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED. IN NO EVENT SHALL ANY CONTRIBUTOR OR COPYRIGHT HOLDER BE LIABLE TO YOU FOR ANY DAMAGES, INCLUDING, BUT NOT LIMITED TO ANY DIRECT, OR INDIRECT, SPECIAL OR CONSEQUENTIAL DAMAGES ARISING FROM YOUR USE OR INABILITY TO USE THE SOFTWARE OR THE CONTRIBUTION IN IT, NO MATTER HOW IT'S CAUSED OR BASED ON WHICH LEGAL THEORY, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
-
-6. Language
-
-THIS LICENSE IS WRITTEN IN BOTH CHINESE AND ENGLISH, AND THE CHINESE VERSION AND ENGLISH VERSION SHALL HAVE THE SAME LEGAL EFFECT. IN THE CASE OF DIVERGENCE BETWEEN THE CHINESE AND ENGLISH VERSIONS, THE CHINESE VERSION SHALL PREVAIL.
-
-END OF THE TERMS AND CONDITIONS
+END OF TERMS AND CONDITIONS
+条款和条件至此结束

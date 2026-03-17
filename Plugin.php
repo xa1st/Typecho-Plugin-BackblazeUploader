@@ -21,7 +21,7 @@ if (!defined('__TYPECHO_ROOT_DIR__')) exit;
  * 
  * @package BackblazeUploader
  * @author 猫东东
- * @version 2.3.0
+ * @version 2.2.2
  * @link https://github.com/xa1st/Typecho-Plugin-BackblazeUploader
  */
 
@@ -57,21 +57,27 @@ class Plugin implements PluginInterface {
     * @return void
     */
     public static function config(Form $form) {
+        // 应用密钥ID
         $keyId = new Text('keyId',  null,  '',  _t('应用密钥ID'),  _t('Backblaze B2的应用密钥ID'));
         $form->addInput($keyId->addRule('required', _t('必须填写应用密钥ID')));
     
+        // 应用密钥
         $applicationKey = new Password('applicationKey',  null,  '',  _t('应用密钥'),  _t('Backblaze B2的应用密钥') );
         $form->addInput($applicationKey->addRule('required', _t('必须填写应用密钥')));
     
+        // 存储桶ID
         $bucketId = new Text('bucketId',  null,  '',  _t('存储桶ID'),  _t('Backblaze B2的存储桶ID') );
         $form->addInput($bucketId->addRule('required', _t('必须填写存储桶ID')));
-    
+
+        // 存储桶名称
         $bucketName = new Text('bucketName', null, '', _t('存储桶名称'), _t('Backblaze B2的存储桶名称'));
         $form->addInput($bucketName->addRule('required', _t('必须填写存储桶名称')));
-    
+
+        // 自定义域名
         $domain = new Text('domain', null, '', _t('自定义域名'), _t('如果您使用了自定义域名，请填写您的域名，例如：https://typecho.com，不包含尾部斜杠'));
         $form->addInput($domain);
-    
+
+        // 存储路径
         $path = new Text('path', null, 'typecho/', _t('存储路径'), _t('文件存储在存储桶中的路径前缀，以/结尾，例如：typecho/'));
         $form->addInput($path);
 
@@ -79,13 +85,8 @@ class Plugin implements PluginInterface {
         $placeholder = new Text('placeholder', null, '', _t('默认占位图'), _t('上传文件时，如果文件上传失败，则显示此图片。'));
         $form->addInput($placeholder);
 
-        $timeOut = new Text(
-            'timeOut',
-            NULL,
-            '30',
-            _t('超时时间（秒）'),
-            _t('上传文件超时时间，单位为秒，默认为30秒。')
-        );
+        // 请求超时
+        $timeOut = new Text('timeOut', NULL, '30', _t('超时时间（秒）'), _t('上传文件超时时间，单位为秒，默认为30秒。'));
         $form->addInput($timeOut->addRule('required', _t('请求超时时间')));
     }
   
@@ -204,12 +205,9 @@ class Plugin implements PluginInterface {
         // 1. 优先使用已存在的完整 URL (通常是 CDN 或云存储插件处理过的)
         if (!empty($attachment['url'])) return $attachment['url'];
         // 2. 获取插件配置
-        $options = \Widget\Options::alloc();  
+        $options = Helper::options()->plugin('BackblazeUploader');  
         // 3. 其次使用相对路径拼接
-        if (!empty($attachment['path'])) {
-            // 获取站点 URL
-            return \Typecho\Common::url($attachment['path'], $options->siteUrl);
-        }
+        if (!empty($attachment['path'])) return \Typecho\Common::url($attachment['path'], $options->siteUrl);
         // 4. 如果没有路径，返回占位图
         return $options->placeholder;
     }
