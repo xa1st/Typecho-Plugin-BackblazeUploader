@@ -21,7 +21,7 @@ if (!defined('__TYPECHO_ROOT_DIR__')) exit;
  * 
  * @package BackblazeUploader
  * @author 猫东东
- * @version 2.2.2
+ * @version 2.2.3
  * @link https://github.com/xa1st/Typecho-Plugin-BackblazeUploader
  */
 
@@ -204,12 +204,11 @@ class Plugin implements PluginInterface {
         }
         // 1. 优先使用已存在的完整 URL (通常是 CDN 或云存储插件处理过的)
         if (!empty($attachment['url'])) return $attachment['url'];
-        // 2. 获取插件配置
-        $options = Helper::options()->plugin('BackblazeUploader');  
-        // 3. 其次使用相对路径拼接
-        if (!empty($attachment['path'])) return \Typecho\Common::url($attachment['path'], $options->siteUrl);
-        // 4. 如果没有路径，返回占位图
-        return $options->placeholder;
+        // 2. 其次使用相对路径拼接
+        if (!empty($attachment['path'])) return \Typecho\Common::url($attachment['path'], Options::alloc()->siteUrl);
+        // 3. 如果没有路径，返回占位图
+        // PS. 感谢 蚂蚱[https://shingchi.de] 指出错误
+        return Helper::options()->plugin('BackblazeUploader')->placeholder;
     }
   
     /**

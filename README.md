@@ -17,7 +17,7 @@
 - 项目名称：Typecho-Plugin-BackblazeUploader
 - 插件名称：BackblazeUploader
 - 作者：猫东东（Alex Xu）
-- 当前版本：v2.2.2（2026-03-17）
+- 当前版本：v2.2.3（2026-03-23）
 
 ## 功能特性
 
@@ -62,7 +62,11 @@
 
 ## 更新日志
 
-### v2.2.2（当前版本）
+### v2.2.3
+
+- 修复占位图读取插件信息错误
+
+### v2.2.2
 
 - 修复占位图部分读取插件信息的错误
 
@@ -97,6 +101,11 @@
 1. 上传失败：检查 `keyId`、`applicationKey`、`bucketId`、`bucketName`，并确认服务器可访问 `https://api.backblazeb2.com`
 2. 上传成功但无法访问：检查 Bucket 读权限与 `domain` 配置（包含协议头，不含末尾 `/`）
 3. 删除附件未同步删除 B2 文件：旧附件若不是由本插件上传，可能缺少 `fileid`，无法执行 B2 删除
+
+## 感谢
+- [Backblaze B2 PHP SDK](https://github.com/backblaze/b2-sdk-php)
+- [Typecho](https://github.com/typecho/typecho)
+- [蚂蚱](https://shingchi.de)
 
 ## 许可证
 
