@@ -72,22 +72,22 @@ class Plugin implements PluginInterface {
         // 存储桶名称
         $bucketName = new Text('bucketName', null, '', _t('存储桶名称'), _t('Backblaze B2的存储桶名称'));
         $form->addInput($bucketName->addRule('required', _t('必须填写存储桶名称')));
-
-        // 自定义域名
-        $domain = new Text('domain', null, '', _t('自定义域名'), _t('如果您使用了自定义域名，请填写您的域名，例如：https://typecho.com，不包含尾部斜杠'));
-        $form->addInput($domain);
-
+        
         // 存储路径
         $path = new Text('path', null, 'typecho/', _t('存储路径'), _t('文件存储在存储桶中的路径前缀，以/结尾，例如：typecho/'));
         $form->addInput($path);
+
+        // 自定义域名
+        $domain = new Text('domain', null, '', _t('自定义域名'), _t('如果您使用了自定义域名，请填写您的域名，需要填写能访问到存储桶的，如果只能到根，则带上存储桶名称，例如：https://typecho.com，不包含尾部斜杠'));
+        $form->addInput($domain);
 
         // 默认占位图
         $placeholder = new Text('placeholder', null, '', _t('默认占位图'), _t('上传文件时，如果文件上传失败，则显示此图片。'));
         $form->addInput($placeholder);
 
         // 请求超时
-        $timeOut = new Text('timeOut', NULL, '30', _t('超时时间（秒）'), _t('上传文件超时时间，单位为秒，默认为30秒。'));
-        $form->addInput($timeOut->addRule('required', _t('请求超时时间')));
+        $timeout = new Text('timeOut', NULL, '30', _t('超时时间（秒）'), _t('上传文件超时时间，单位为秒，默认为30秒。'));
+        $form->addInput($timeout->addRule('required', _t('请求超时时间')));
     }
   
     /**
@@ -118,10 +118,12 @@ class Plugin implements PluginInterface {
         if (!Upload::checkFileType($ext))  throw new Exception('不允许上传的文件类型');
         // 获取插件配置
         $options = Helper::options()->plugin('BackblazeUploader');
+        // 获取文件名
+        $fileName = date('Y/md/') . sprintf('%u', crc32(uniqid())) . '.' . $ext;
         // 完全路径
-        $fileName = $modify ? $file['path'] : (rtrim($options->path, '/') . '/' . date('Y/md/') . sprintf('%u', crc32(uniqid())) . '.' . $ext);
+        $filePath = $modify ? $file['path'] : (rtrim($options->path, '/') . '/' . $fileName);
         // 上传到Backblaze.com
-        $uploaded = self::uploadToBackblaze($file['tmp_name'], $fileName, $options);
+        $uploaded = self::uploadToBackblaze($file['tmp_name'], $filePath, $options);
         // 上传失败抛出错误
         if (!$uploaded) throw new Exception('上传失败');
         // 路径
@@ -129,8 +131,8 @@ class Plugin implements PluginInterface {
         // 返回结果
         return [
             'name' => $file['name'], 
-            'path' => $fileName,  // 这个直接用于
-            'url' => $domain . '/' . $fileName,
+            'path' => $filePath,  // 这个直接用于文件删除用，所以带全路径的，包括存储路径
+            'url'  => rtrim($domain, '/') . '/' . $fileName, // 这个用于前端显示的，带全路径的，包括自定义域名或默认域名
             'size' => $uploaded['contentLength'], 
             'type' => str_replace('image/', '', $uploaded['contentType']),
             'mime' => @Common::mimeContentType($file['tmp_name']),

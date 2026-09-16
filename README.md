@@ -2,7 +2,7 @@
 
 > 将 Typecho 附件上传到 Backblaze B2 的插件，支持上传、替换、删除与附件 URL 回调。
 
-[![Version](https://img.shields.io/badge/version-v2.2.2-blue.svg?style=flat-square)](./README.md)
+[![Version](https://img.shields.io/badge/version-v2.3.1-blue.svg?style=flat-square)](./README.md)
 [![Typecho](https://img.shields.io/badge/Typecho-Plugin-167B94.svg?style=flat-square)](./README.md)
 [![PHP](https://img.shields.io/badge/PHP-8.x-4F5B93.svg?style=flat-square)](./README.md)
 [![License](https://img.shields.io/badge/许可证-木兰宽松第2版-red.svg)](./LICENSE)
@@ -17,7 +17,7 @@
 - 项目名称：Typecho-Plugin-BackblazeUploader
 - 插件名称：BackblazeUploader
 - 作者：猫东东（Alex Xu）
-- 当前版本：v2.2.3（2026-03-23）
+- 当前版本：v2.3.1（2026-09-16）
 
 ## 功能特性
 
@@ -56,11 +56,17 @@
 
 ## 上传路径与访问 URL
 
-- 新上传文件路径格式：`<path>/<Y/md>/<crc32>.<ext>`
+- 新上传文件路径格式：`<Y/md>/<crc32>.<ext>`
 - 若 `domain` 为空，默认访问域名为：`https://f002.backblazeb2.com/file/<bucketName>`
-- 返回 URL 形如：`<domain>/<filePath>`
+- 若 `domain` 不为空，访问域名为：`<domain>/<Y/md>/<crc32>.<ext>`
+- 自定义域名指向存储位置的访问的位置，并非根目录，如果你指定的目录是typecho，但是域名绑在根上，则自定义应该填写 `https://typecho.com/typecho`
 
 ## 更新日志
+
+### v2.3.1
+
+- 修复自定义域名返回路径的错误
+- 修复timeOut为timeout，手误的低级错误
 
 ### v2.2.3
 
