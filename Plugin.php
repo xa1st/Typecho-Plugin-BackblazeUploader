@@ -21,7 +21,7 @@ if (!defined('__TYPECHO_ROOT_DIR__')) exit;
  * 
  * @package BackblazeUploader
  * @author 猫东东
- * @version 2.2.3
+ * @version 2.3.2
  * @link https://github.com/xa1st/Typecho-Plugin-BackblazeUploader
  */
 
@@ -58,12 +58,12 @@ class Plugin implements PluginInterface {
     */
     public static function config(Form $form) {
         // 应用密钥ID
-        $keyId = new Text('keyId',  null,  '',  _t('应用密钥ID'),  _t('Backblaze B2的应用密钥ID'));
-        $form->addInput($keyId->addRule('required', _t('必须填写应用密钥ID')));
-    
+        $keyId = new Text('keyId',  null,  '',  _t('应用密钥ID'),  _t('Backblaze B2的应用密钥ID。如在config.php中定义了BACKBLAZE_KEY_ID常量或设置了同名环境变量，可留空，且常量/环境变量优先'));
+        $form->addInput($keyId);
+
         // 应用密钥
-        $applicationKey = new Password('applicationKey',  null,  '',  _t('应用密钥'),  _t('Backblaze B2的应用密钥') );
-        $form->addInput($applicationKey->addRule('required', _t('必须填写应用密钥')));
+        $applicationKey = new Password('applicationKey',  null,  '',  _t('应用密钥'),  _t('Backblaze B2的应用密钥。如在config.php中定义了BACKBLAZE_APPLICATION_KEY常量或设置了同名环境变量，可留空，且常量/环境变量优先') );
+        $form->addInput($applicationKey);
     
         // 存储桶ID
         $bucketId = new Text('bucketId',  null,  '',  _t('存储桶ID'),  _t('Backblaze B2的存储桶ID') );
@@ -77,6 +77,10 @@ class Plugin implements PluginInterface {
         $path = new Text('path', null, 'typecho/', _t('存储路径'), _t('文件存储在存储桶中的路径前缀，以/结尾，例如：typecho/'));
         $form->addInput($path);
 
+        // 文件命名方式
+        $fileNameFormat = new Text('fileNameFormat', null, 'Y/m/', _t('文件夹名称格式'), _t('要存文件的文件夹名称格式，使用PHP date()格式字符，例如：YmdHis 生成 20261029153045，Y/m/ 生成 2026/10/。最终路径为：存储路径 + 该前缀 + 随机文件名 + 扩展名。'));
+        $form->addInput($fileNameFormat);
+
         // 自定义域名
         $domain = new Text('domain', null, '', _t('自定义域名'), _t('如果您使用了自定义域名，请填写您的域名，需要填写能访问到存储桶的，如果只能到根，则带上存储桶名称，例如：https://typecho.com，不包含尾部斜杠'));
         $form->addInput($domain);
@@ -86,7 +90,7 @@ class Plugin implements PluginInterface {
         $form->addInput($placeholder);
 
         // 请求超时
-        $timeout = new Text('timeOut', NULL, '30', _t('超时时间（秒）'), _t('上传文件超时时间，单位为秒，默认为30秒。'));
+        $timeout = new Text('timeout', NULL, '30', _t('超时时间（秒）'), _t('上传文件超时时间，单位为秒，默认为30秒。'));
         $form->addInput($timeout->addRule('required', _t('请求超时时间')));
     }
   
@@ -119,7 +123,8 @@ class Plugin implements PluginInterface {
         // 获取插件配置
         $options = Helper::options()->plugin('BackblazeUploader');
         // 获取文件名
-        $fileName = date('Y/md/') . sprintf('%u', crc32(uniqid())) . '.' . $ext;
+        $fileNameFormat = empty($options->fileNameFormat) ? 'Y/m/' : $options->fileNameFormat;
+        $fileName = date($fileNameFormat) . sprintf('%u', crc32(uniqid())) . '.' . $ext;
         // 完全路径
         $filePath = $modify ? $file['path'] : (rtrim($options->path, '/') . '/' . $fileName);
         // 上传到Backblaze.com
@@ -169,9 +174,14 @@ class Plugin implements PluginInterface {
         if (empty($fileid) && $author != 'BackblazeUploader') return false;
         // 获取插件配置
         $options = Helper::options()->plugin('BackblazeUploader');
-        // 获取授权信息
-        $auth = self::getBackblazeAuth($options->keyId, $options->applicationKey);
-        // 授权失败则直接返回
+        // 获取凭据（常量 > 环境变量 > 后台配置）
+        [$keyId, $applicationKey] = self::getCredentials($options);
+        // 获取授权信息，授权失败则直接返回
+        try {
+            $auth = self::getBackblazeAuth($keyId, $applicationKey);
+        } catch (Exception $e) {
+            return false;
+        }
         if (!$auth) return false;
         // 开始删除文件
         try {
@@ -221,10 +231,12 @@ class Plugin implements PluginInterface {
     * @return bool
     */
     private static function uploadToBackblaze($filePath, $fileTargetPath, $options = []) {
+        // 获取凭据（常量 > 环境变量 > 后台配置）
+        [$keyId, $applicationKey] = self::getCredentials($options);
         // 检查配置
-        if (empty($options->keyId) || empty($options->applicationKey)) throw new Exception('BackblazeUploader: 缺少必需的配置信息');
+        if (empty($keyId) || empty($applicationKey)) throw new Exception('BackblazeUploader: 缺少必需的配置信息');
         // 获取授权信息
-        $authResponse = self::getBackblazeAuth($options->keyId, $options->applicationKey);
+        $authResponse = self::getBackblazeAuth($keyId, $applicationKey);
         // 判定响应
         if (!$authResponse || !isset($authResponse['authorizationToken'])) throw new Exception('授权失败');
         // 获取上传URL
@@ -270,6 +282,22 @@ class Plugin implements PluginInterface {
         }
     }
     
+    /**
+    * 获取B2凭据
+    * 优先级：config.php中的常量 > 环境变量 > 后台配置
+    *
+    * @param mixed $options 插件配置
+    * @return array [keyId, applicationKey]
+    */
+    private static function getCredentials($options): array {
+        // 优先使用常量
+        $keyId = defined('BACKBLAZE_KEY_ID') ? BACKBLAZE_KEY_ID
+            : (getenv('BACKBLAZE_KEY_ID') ?: ($options->keyId ?? ''));
+        $applicationKey = defined('BACKBLAZE_APPLICATION_KEY') ? BACKBLAZE_APPLICATION_KEY
+            : (getenv('BACKBLAZE_APPLICATION_KEY') ?: ($options->applicationKey ?? ''));
+        return [$keyId, $applicationKey];
+    }
+
     /**
     * 获取Backblaze B2认证信息
     * 

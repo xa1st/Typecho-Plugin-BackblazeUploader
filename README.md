@@ -2,7 +2,7 @@
 
 > 将 Typecho 附件上传到 Backblaze B2 的插件，支持上传、替换、删除与附件 URL 回调。
 
-[![Version](https://img.shields.io/badge/version-v2.3.1-blue.svg?style=flat-square)](./README.md)
+[![Version](https://img.shields.io/badge/version-v2.3.2-blue.svg?style=flat-square)](./README.md)
 [![Typecho](https://img.shields.io/badge/Typecho-Plugin-167B94.svg?style=flat-square)](./README.md)
 [![PHP](https://img.shields.io/badge/PHP-8.x-4F5B93.svg?style=flat-square)](./README.md)
 [![License](https://img.shields.io/badge/许可证-木兰宽松第2版-red.svg)](./LICENSE)
@@ -17,7 +17,7 @@
 - 项目名称：Typecho-Plugin-BackblazeUploader
 - 插件名称：BackblazeUploader
 - 作者：猫东东（Alex Xu）
-- 当前版本：v2.3.1（2026-09-16）
+- 当前版本：v2.3.2（2026-10-29）
 
 ## 功能特性
 
@@ -46,22 +46,39 @@
 
 | 字段 | 说明 | 是否必填 | 示例 |
 | --- | --- | --- | --- |
-| `keyId` | Application Key ID | 必填 | `xxxxxx` |
-| `applicationKey` | Application Key | 必填 | `xxxxxx` |
+| `keyId` | Application Key ID（支持常量/环境变量，见下方说明） | 可选 | `xxxxxx` |
+| `applicationKey` | Application Key（支持常量/环境变量，见下方说明） | 可选 | `xxxxxx` |
 | `bucketId` | B2 Bucket ID | 必填 | `xxxxxx` |
 | `bucketName` | B2 Bucket 名称 | 必填 | `my-bucket` |
 | `domain` | 自定义域名（不含末尾 `/`） | 可选 | `https://cdn.example.com` |
 | `path` | 存储路径前缀（建议以 `/` 结尾） | 可选 | `typecho/` |
-| `timeOut` | 超时时间（秒） | 可选 | `30` |
+| `fileNameFormat` | 文件名前面的日期路径前缀，PHP `date()` 格式字符 | 可选 | `Y/md/` |
+| `timeout` | 超时时间（秒） | 可选 | `30` |
+
+## 凭据配置优先级
+
+B2 凭据（`keyId` / `applicationKey`）按以下优先级读取，高优先级来源存在时忽略低优先级来源：
+
+1. `config.php` 中定义的常量 `BACKBLAZE_KEY_ID`、`BACKBLAZE_APPLICATION_KEY`
+2. 同名环境变量 `BACKBLAZE_KEY_ID`、`BACKBLAZE_APPLICATION_KEY`
+3. 插件后台配置
+
+将密钥写在 `config.php` 常量或环境变量中而非数据库，可以避免密钥落库，建议生产环境使用。
 
 ## 上传路径与访问 URL
 
-- 新上传文件路径格式：`<Y/md>/<crc32>.<ext>`
+- 新上传文件路径格式：`<fileNameFormat格式化结果><crc32>.<ext>`，`fileNameFormat` 默认为 `Y/md/`，即 `<Y/md>/<crc32>.<ext>`
 - 若 `domain` 为空，默认访问域名为：`https://f002.backblazeb2.com/file/<bucketName>`
 - 若 `domain` 不为空，访问域名为：`<domain>/<Y/md>/<crc32>.<ext>`
 - 自定义域名指向存储位置的访问的位置，并非根目录，如果你指定的目录是typecho，但是域名绑在根上，则自定义应该填写 `https://typecho.com/typecho`
 
 ## 更新日志
+
+### v2.3.2
+
+- 新增「文件命名方式」配置项，可自定义文件名前的日期路径前缀（PHP `date()` 格式，默认 `Y/m/`）
+- 支持通过常量 `BACKBLAZE_KEY_ID` / `BACKBLAZE_APPLICATION_KEY` 或同名环境变量配置凭据，优先级高于后台配置
+- 修复删除附件时授权失败异常未被捕获的问题
 
 ### v2.3.1
 
